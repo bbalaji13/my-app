@@ -7,11 +7,15 @@ function Timelog() {
   const [projectName, setProjectName] = useState('');
   const [date, setDate] = useState(null);
   const [description, setDescription] = useState('');
+  const [blocker, setBlocker] = useState('');
   const [timelogEntries, setTimelogEntries] = useState([]);
   const [timerRunning, setTimerRunning] = useState(false);
   const [startTime, setStartTime] = useState(null);
   const [stopTime, setStopTime] = useState(null);
   const [entryMode, setEntryMode] = useState('manual');
+  const [fromDate, setFromDate] = useState(null);
+  const [toDate, setToDate] = useState(null);
+  const [filterProjectName, setFilterProjectName] = useState('');
 
   useEffect(() => {
     if (timerRunning) {
@@ -35,6 +39,10 @@ function Timelog() {
 
   const handleDescriptionChange = (event) => {
     setDescription(event.target.value);
+  };
+
+  const handleBlockerChange = (event) => {
+    setBlocker(event.target.value);
   };
 
   const handleStartTimer = () => {
@@ -67,6 +75,7 @@ function Timelog() {
       projectName,
       date: date ? date.toLocaleDateString() : new Date().toLocaleDateString(),
       description,
+      blocker,
       startTime: formatTime(start),
       stopTime: formatTime(stop),
       duration,
@@ -76,6 +85,7 @@ function Timelog() {
     setProjectName('');
     setDate(null);
     setDescription('');
+    setBlocker('');
     setStartTime(null);
     setStopTime(null);
   };
@@ -113,7 +123,33 @@ function Timelog() {
     setEntryMode(event.target.value);
   };
 
+  const handleFromDateChange = (date) => {
+    setFromDate(date);
+  };
+
+  const handleToDateChange = (date) => {
+    setToDate(date);
+  };
+
+  const handleFilterProjectNameChange = (event) => {
+    setFilterProjectName(event.target.value);
+  };
+
   const sortedEntries = timelogEntries.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  const filteredEntries = sortedEntries.filter((entry) => {
+    const entryDate = new Date(entry.date);
+    if (fromDate && entryDate < fromDate) {
+      return false;
+    }
+    if (toDate && entryDate > toDate) {
+      return false;
+    }
+    if (filterProjectName && !entry.projectName.toLowerCase().includes(filterProjectName.toLowerCase())) {
+      return false;
+    }
+    return true;
+  });
 
   return (
     <div className="timelog-container">
@@ -166,6 +202,16 @@ function Timelog() {
               required
             ></textarea>
           </div>
+          {entryMode === 'manual' && (
+            <div className="form-field">
+              <label>Blocker:</label>
+              <input
+                type="text"
+                value={blocker}
+                onChange={handleBlockerChange}
+              />
+            </div>
+          )}
         </div>
         {entryMode === 'timer' && !timerRunning && (
           <div className="form-row">
@@ -203,6 +249,34 @@ function Timelog() {
             </div>
           </div>
         )}
+        {entryMode === 'manual' && (
+          <div className="form-row">
+            <div className="form-field">
+              <label>From Date:</label>
+              <DatePicker
+                selected={fromDate}
+                onChange={handleFromDateChange}
+                dateFormat="dd/MM/yyyy"
+              />
+            </div>
+            <div className="form-field">
+              <label>To Date:</label>
+              <DatePicker
+                selected={toDate}
+                onChange={handleToDateChange}
+                dateFormat="dd/MM/yyyy"
+              />
+            </div>
+            <div className="form-field">
+              <label>Filter Project Name:</label>
+              <input
+                type="text"
+                value={filterProjectName}
+                onChange={handleFilterProjectNameChange}
+              />
+            </div>
+          </div>
+        )}
         <div className="form-row">
           <button type="submit" className="submit-btn">
             {entryMode === 'timer' && timerRunning ? 'Stop Timer & Add Entry' : 'Add Entry'}
@@ -216,17 +290,19 @@ function Timelog() {
             <th>Start Time</th>
             <th>Stop Time</th>
             <th>Description</th>
+            {entryMode === 'manual' && <th>Blocker</th>}
             <th>Duration</th>
             <th>Project Name</th>
           </tr>
         </thead>
         <tbody>
-          {sortedEntries.map((entry, index) => (
+          {filteredEntries.map((entry, index) => (
             <tr key={index}>
               <td>{entry.date}</td>
               <td>{entry.startTime}</td>
               <td>{entry.stopTime}</td>
               <td>{entry.description}</td>
+              {entryMode === 'manual' && <td>{entry.blocker}</td>}
               <td>{entry.duration}</td>
               <td>{entry.projectName}</td>
             </tr>
